@@ -1,6 +1,6 @@
 ---
 name: fnpack-dev
-version: 1.2.5
+version: 1.2.6
 description: Develop and package apps for 飞牛 fnOS NAS using fnpack CLI. Use when creating, configuring, building fnOS .fpk packages, writing lifecycle scripts, setting app entries, or configuring wizards.
 ---
 
