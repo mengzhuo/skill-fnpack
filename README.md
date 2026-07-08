@@ -1,6 +1,6 @@
-# fnpack-dev
+# fnpack-dev — 飞牛 fnOS 应用开发 Skill
 
-OpenCode skill for developing 飞牛 fnOS applications with [fnpack](https://developer.fnnas.com/docs/cli/fnpack/).
+AI 辅助开发飞牛 fnOS 应用的 Agent Skill，基于 [fnpack](https://developer.fnnas.com/docs/cli/fnpack/) 文档构建。
 
 ## Install
 
