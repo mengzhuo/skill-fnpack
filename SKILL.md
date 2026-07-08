@@ -98,6 +98,20 @@ Only use when user input is genuinely needed. JSON array of steps with `items[]`
 | **Static CGI** | `ctl_stop=false`, no `service_port`, entry via `index.cgi` URL |
 | **Service** | `service_port` declared, `cmd/main` manages process |
 | **Docker** | `--template docker`, `config/resource` declares `docker-project` |
+| **Notepad (Full-stack)** | Unified Gateway, Node.js backend + frontend, `data-share`, Unix socket |
+
+### Notepad Pattern — Full-stack Native App
+
+The recommended pattern for UI apps with a backend service. Key decisions:
+
+- **Gateway access**: `gatewayPrefix="/app/{appname}"`, `gatewaySocket="app.sock"` (no `service_port`)
+- **Runtime**: `install_dep_apps=nodejs_v22`, `cmd/main` adds Node.js to `PATH` and starts server on `$TRIM_APPDEST/app.sock`
+- **Persistence**: `config/resource` declares `data-share`, server writes to `$TRIM_DATA_SHARE_PATHS`
+- **Auth**: server reads `X-Trim-Userid` header forwarded by gateway for per-user isolation
+- **Build**: `npm run build:frontend` → copy backend + dist to `app/server/` → `fnpack build`
+- **Entry**: `type: "iframe"`, `url: "/app/{appname}"`, `gatewayPrefix` + `gatewaySocket`
+
+See [REFERENCE.md](REFERENCE.md) for full Notepad implementation walkthrough.
 
 ## Key Rules
 

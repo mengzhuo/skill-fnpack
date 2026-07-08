@@ -417,6 +417,184 @@ Declared via `install_dep_apps`. Add `bin` to `PATH` before use.
 | Node.js v22 *(v1.2.3)* | `nodejs_v22` | `/var/apps/nodejs_v22/target/bin` | v1.2.3 |
 | Java 21 *(v1.2.3)* | `java-21-openjdk` | `/var/apps/java-21-openjdk/target/bin` | v1.2.3 |
 
+## Notepad Pattern — Full-stack Native App *(v1.2.3)*
+
+The "Notepad" pattern is the recommended architecture for fnOS apps that need a backend service with a web UI. Based on the official [Native 应用案例](https://developer.fnnas.com/docs/examples/native/).
+
+### Architecture
+
+```
+notepad-demo/
+├── backend/              # Node.js Express server
+│   ├── server.js         # API + static file serving
+│   └── package.json
+├── frontend/             # React/Vite SPA
+│   ├── src/main.jsx
+│   ├── vite.config.mjs
+│   └── package.json
+├── scripts/
+│   └── build-combined.js # npm run build:frontend → copy to app/server/
+├── notepad/              # fnOS app package (fnpack create)
+│   ├── manifest          # appname=notepad, install_dep_apps=nodejs_v22
+│   ├── cmd/main          # starts Node.js on Unix socket
+│   ├── config/
+│   │   ├── privilege     # run-as: package
+│   │   └── resource      # data-share: notepad/notes
+│   ├── app/ui/config     # gatewayPrefix + gatewaySocket
+│   ├── ICON.PNG
+│   └── ICON_256.PNG
+└── package.json          # npm workspaces root
+```
+
+### Key Decisions
+
+**1. Gateway Access (not port-based)**
+
+```json
+// app/ui/config
+{ ".url": { "notepad.main": {
+    "type": "iframe", "protocol": "",
+    "gatewayPrefix": "/app/notepad",
+    "gatewaySocket": "app.sock",
+    "url": "/app/notepad",
+    "allUsers": true
+} } }
+```
+No `service_port` in manifest. Gateway authenticates, forwards to Unix socket, passes `X-Trim-Userid`.
+
+**2. Server listens on Unix socket**
+
+```js
+// backend/server.js — key patterns
+const SOCKET_PATH = process.env.SOCKET_PATH || "";
+const GATEWAY_PREFIX = process.env.GATEWAY_PREFIX || "/app/notepad";
+const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, "data");
+
+// Auth: read gateway-forwarded user identity
+function getUserId(req) {
+  return req.headers["x-trim-userid"] || "local";
+}
+
+// Persistence: per-user files in data-share dir
+function getNoteFile(req) {
+  const userId = String(getUserId(req)).replace(/[^a-zA-Z0-9_-]/g, "_");
+  return path.join(DATA_DIR, `note-${userId}.txt`);
+}
+
+// Serve frontend static + API on same gateway prefix
+app.use(GATEWAY_PREFIX, router);
+app.use(GATEWAY_PREFIX, express.static(STATIC_DIR));
+app.get(`${GATEWAY_PREFIX}/*`, (req, res) => res.sendFile(path.join(STATIC_DIR, "index.html")));
+
+// Listen on socket (prod) or port (dev)
+if (SOCKET_PATH) {
+  fs.rmSync(SOCKET_PATH, { force: true });
+  app.listen(SOCKET_PATH, () => console.log(`running on ${SOCKET_PATH}`));
+} else {
+  app.listen(PORT, () => console.log(`running at http://localhost:${PORT}`));
+}
+```
+
+**3. Frontend uses gateway prefix as base**
+
+```js
+// vite.config.mjs
+export default defineConfig({
+  base: "/app/notepad/",
+  server: {
+    proxy: { "/app/notepad": "http://localhost:5001" }
+  }
+});
+
+// React: fetch relative to gateway prefix
+fetch("/app/notepad/api/note")
+```
+
+**4. `cmd/main` starts Node.js**
+
+```bash
+#!/bin/bash
+export PATH=/var/apps/nodejs_v22/target/bin:$PATH
+
+# Env vars for the server
+APP_DIR="${TRIM_APPDEST}/server"
+DATA_DIR="${TRIM_DATA_SHARE_PATHS%%:*}"      # First data-share path
+GATEWAY_PREFIX="/app/notepad"
+SOCKET_PATH="${TRIM_APPDEST}/app.sock"
+
+case "$1" in
+  start)
+    cd "$APP_DIR" || exit 1
+    DATA_DIR="$DATA_DIR" SOCKET_PATH="$SOCKET_PATH" \
+      GATEWAY_PREFIX="$GATEWAY_PREFIX" \
+      node server.js >> "${TRIM_PKGVAR}/app.log" 2>&1 &
+    echo "$!" > "${TRIM_PKGVAR}/app.pid"
+    ;;
+  stop)
+    pid=$(head -n 1 "${TRIM_PKGVAR}/app.pid")
+    kill -TERM "$pid" 2>/dev/null
+    rm -f "${TRIM_PKGVAR}/app.pid" "${TRIM_APPDEST}/app.sock"
+    ;;
+  status)
+    pid=$(head -n 1 "${TRIM_PKGVAR}/app.pid" 2>/dev/null)
+    kill -0 "$pid" 2>/dev/null && exit 0 || exit 3
+    ;;
+esac
+```
+
+**5. Manifest declares runtime + no port**
+
+```
+appname=notepad
+version=0.0.1
+platform=all
+desktop_uidir=ui
+install_dep_apps=nodejs_v22
+ctl_stop=true
+# No service_port — gateway handles routing
+```
+
+**6. `config/resource` declares data directory**
+
+```json
+{ "data-share": { "shares": [{ "name": "notepad/notes" }] } }
+```
+Server accesses via `$TRIM_DATA_SHARE_PATHS` or `/var/apps/notepad/share/notes`.
+
+**7. Build script (`scripts/build-combined.js`)**
+
+```js
+// 1. npm run build in frontend/
+// 2. Copy backend/ to dist/ (skip node_modules)
+// 3. Copy frontend/dist/ to dist/public/
+// 4. npm install --omit=dev in dist/
+// 5. Copy dist/ to notepad/app/server/
+// 6. fnpack build --directory notepad/
+```
+
+### Local Development
+
+```bash
+npm install --workspaces
+npm run start    # starts backend:5001 + frontend:5173 with proxy
+# Open: http://localhost:5001/app/notepad
+```
+
+### When to Use Notepad Pattern
+
+Use when the app needs:
+- A custom web UI (React/Vue/etc.)
+- A backend service with business logic
+- Per-user data isolation
+- Gateway auth (NAS login integration)
+- Persistent storage via `data-share`
+
+Do NOT use when:
+- Simple static pages → CGI pattern
+- No backend needed → Static CGI
+- Multi-service or containerized → Docker pattern
+- No UI needed → Service pattern
+
 ## Build Validation Checklist *(v1.2.3)*
 
 `fnpack build` validates before generating `.fpk`:

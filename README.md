@@ -26,7 +26,9 @@ The skill auto-activates when the agent encounters fnpack/fnOS related tasks. It
 - **Wizards** — install/upgrade/uninstall/config forms with validation
 - **Resources** — shared dirs, system links, Docker projects
 - **Environment variables** — complete `$TRIM_*` reference
+- **App patterns** — Static CGI, Service, Docker, **Notepad (full-stack: Node.js + React + Gateway)**
 - **Middleware & runtimes** — Redis, MinIO, RabbitMQ, Python, Node.js, Java
+- **CI/CD** — `mengzhuo/setup-fnpack@v1` for GitHub Actions
 
 ## Structure
 
