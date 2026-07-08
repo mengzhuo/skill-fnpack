@@ -1,6 +1,6 @@
 ---
 name: fnpack-dev
-description: Develop and package applications for 飞牛 fnOS NAS platform using fnpack CLI. Use when creating, configuring, or building fnOS apps (.fpk packages), writing lifecycle scripts, setting up app entries, or configuring wizards. Triggers: fnpack, fnOS app, .fpk, 飞牛应用, manifest, app/ui/config, wizard form.
+description: Develop and package apps for 飞牛 fnOS NAS using fnpack CLI. Use when creating, configuring, building fnOS .fpk packages, writing lifecycle scripts, setting app entries, or configuring wizards.
 ---
 
 # fnpack Development
