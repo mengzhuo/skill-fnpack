@@ -21,6 +21,15 @@ fnpack create MyApp --template docker --without-ui true  # Docker service only
 fnpack build                                  # Generate .fpk
 ```
 
+## CI/CD Integration
+
+For GitHub Actions, use `mengzhuo/setup-fnpack@v1` to install fnpack in CI:
+
+```yaml
+- uses: mengzhuo/setup-fnpack@v1
+- run: fnpack build
+```
+
 ## Project Structure
 
 ```

@@ -246,6 +246,15 @@
 | `fnpack build` | — | v1.2.3 | Build .fpk in current dir |
 | `fnpack build` | `--directory <path>` | v1.2.3 | Build .fpk from specified dir |
 
+### GitHub Actions *(v1.2.3)*
+
+Use [`mengzhuo/setup-fnpack@v1`](https://github.com/mengzhuo/setup-fnpack) to install fnpack in CI:
+
+```yaml
+- uses: mengzhuo/setup-fnpack@v1
+- run: fnpack build
+```
+
 ## CGI (index.cgi) *(v1.2.3)*
 
 `app/ui/index.cgi` is a lightweight CGI-based entry point. When users open a CGI URL, fnOS invokes the executable CGI script. `protocol` and `port` are ignored for CGI routing.
